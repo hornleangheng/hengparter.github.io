@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <title>Article | NewsHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header id="header">
+    <div class="header-top">
+      <div class="container">
+        <span>📅 <span id="today-date"></span></span>
+        <div><a href="/admin/login.html">Admin</a></div>
+      </div>
+    </div>
+    <div class="header-main">
+      <div class="container">
+        <a href="/" class="logo">
+          <div class="logo-icon">N</div>
+          <div class="logo-text"><span>NewsHub</span><span>Your Trusted News Source</span></div>
+        </a>
+        <form class="header-search" id="search-form">
+          <input type="text" id="search-input" placeholder="Search news...">
+          <button type="submit">🔍</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <nav id="navbar">
+    <div class="container nav-container">
+      <ul class="nav-list" id="nav-list">
+        <li><a href="/">🏠 Home</a></li>
+        <li><a href="/category.html?cat=Politics">🏛️ Politics</a></li>
+        <li><a href="/category.html?cat=Sport">⚽ Sport</a></li>
+        <li><a href="/category.html?cat=Technology">💻 Tech</a></li>
+        <li><a href="/category.html?cat=Entertainment">🎭 Entertainment</a></li>
+        <li><a href="/category.html?cat=Business">💼 Business</a></li>
+        <li><a href="/category.html?cat=World">🌍 World</a></li>
+      </ul>
+      <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <main>
+    <div class="container">
+      <div class="main-layout article-page">
+        <!-- Article Content -->
+        <div>
+          <!-- Breadcrumb -->
+          <div style="margin-bottom:16px;font-size:13px;color:var(--text-muted)">
+            <a href="/" style="color:var(--primary)">Home</a> › <span id="breadcrumb-cat">Article</span>
+          </div>
+
+          <div id="article-content">
+            <div style="text-align:center;padding:80px 20px;color:#999">
+              <div style="font-size:40px;margin-bottom:16px">📰</div>
+              <p>Loading article...</p>
+            </div>
+          </div>
+
+          <!-- Related Articles -->
+          <div style="margin-top:40px">
+            <div class="section-title"><span class="icon">📌</span> Related Articles</div>
+            <div class="news-grid" id="related-articles" style="grid-template-columns:repeat(3,1fr)"></div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-widget">
+            <div class="widget-title">🕐 Latest News</div>
+            <div id="side-latest"></div>
+          </div>
+          <div class="sidebar-widget">
+            <div class="widget-title">🔥 Most Read</div>
+            <div id="popular-list"></div>
+          </div>
+          <div class="sidebar-widget">
+            <div class="widget-title">📂 Categories</div>
+            <div class="category-tags" id="category-tags"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-bottom" style="background:var(--secondary)">
+      <div class="container">
+        <p>© 2024 NewsHub. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  </script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="NewsHub - Your trusted source for breaking news, politics, sports, technology and more.">
+  <meta name="keywords" content="news, breaking news, politics, sports, technology, entertainment">
+  <meta property="og:title" content="NewsHub - Breaking News & Latest Updates">
+  <meta property="og:description" content="Stay informed with the latest news from around the world.">
+  <title>NewsHub - Breaking News & Latest Updates</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header id="header">
+    <div class="header-top">
+      <div class="container">
+        <span>📅 <span id="today-date"></span></span>
+        <div>
+          <a href="/admin/login.html">Admin</a>
+          <a href="/pages/about.html">About</a>
+          <a href="/pages/contact.html">Contact</a>
+        </div>
+      </div>
+    </div>
+    <div class="header-main">
+      <div class="container">
+        <a href="/" class="logo">
+          <div class="logo-icon">N</div>
+          <div class="logo-text">
+            <span>NewsHub</span>
+            <span>Your Trusted News Source</span>
+          </div>
+        </a>
+        <form class="header-search" id="search-form">
+          <input type="text" id="search-input" placeholder="Search news...">
+          <button type="submit">🔍</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation -->
+  <nav id="navbar">
+    <div class="container nav-container">
+      <ul class="nav-list" id="nav-list">
+        <li><a href="/" class="active">🏠 Home</a></li>
+        <li><a href="/category.html?cat=Politics" data-cat="Politics">🏛️ Politics</a></li>
+        <li><a href="/category.html?cat=Sport" data-cat="Sport">⚽ Sport</a></li>
+        <li><a href="/category.html?cat=Technology" data-cat="Technology">💻 Tech</a></li>
+        <li><a href="/category.html?cat=Entertainment" data-cat="Entertainment">🎭 Entertainment</a></li>
+        <li><a href="/category.html?cat=Business" data-cat="Business">💼 Business</a></li>
+        <li><a href="/category.html?cat=Health" data-cat="Health">🏥 Health</a></li>
+        <li><a href="/category.html?cat=World" data-cat="World">🌍 World</a></li>
+        <li><a href="/admin/login.html" class="nav-admin-btn">⚙️ Admin</a></li>
+      </ul>
+      <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Breaking News -->
+  <div class="breaking-news">
+    <div class="container">
+      <span class="breaking-label">🔴 Breaking</span>
+      <div class="ticker-wrap">
+        <div class="ticker-content" id="ticker-content">
+          <a href="#">Loading latest headlines...</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main>
+    <div class="container">
+      <!-- Featured Slider -->
+      <section class="slider-section" id="slider-section">
+        <div class="slider-container">
+          <div class="slider-track" id="slider-track">
+            <div class="slide">
+              <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200" alt="Loading">
+              <div class="slide-overlay"></div>
+              <div class="slide-content">
+                <span class="slide-category">Loading</span>
+                <h2 class="slide-title">Loading featured articles...</h2>
+              </div>
+            </div>
+          </div>
+          <button class="slider-btn prev" onclick="prevSlide()">❮</button>
+          <button class="slider-btn next" onclick="nextSlide()">❯</button>
+          <div class="slider-dots" id="slider-dots"></div>
+        </div>
+      </section>
+
+      <!-- Top Stories -->
+      <section style="margin-bottom:28px">
+        <div class="section-title"><span class="icon">🔥</span> Top Stories</div>
+        <div class="top-stories">
+          <div class="top-story-main" id="top-story-main">
+            <div class="skeleton-card">
+              <div class="skeleton skeleton-img" style="height:300px"></div>
+              <div class="skeleton-body">
+                <div class="skeleton skeleton-title" style="width:80%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="top-stories-side" id="top-stories-side">
+            ${Array(4).fill('<div class="skeleton" style="height:72px;border-radius:6px"></div>').join('')}
+          </div>
+        </div>
+      </section>
+
+      <!-- Main Layout -->
+      <div class="main-layout">
+        <!-- Main Content -->
+        <div>
+          <!-- Latest News -->
+          <section class="category-section">
+            <div class="section-title"><span class="icon">📰</span> Latest News</div>
+            <div class="news-grid" id="latest-grid">
+              <!-- Loaded by JS -->
+            </div>
+            <div class="pagination" id="main-pagination"></div>
+          </section>
+
+          <!-- Category Sections -->
+          <div id="category-sections"></div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <!-- Popular Posts -->
+          <div class="sidebar-widget">
+            <div class="widget-title">🔥 Most Read</div>
+            <div id="popular-list">
+              ${Array(5).fill('<div class="skeleton" style="height:50px;border-radius:4px;margin-bottom:8px"></div>').join('')}
+            </div>
+          </div>
+
+          <!-- Categories -->
+          <div class="sidebar-widget">
+            <div class="widget-title">📂 Categories</div>
+            <div class="category-tags" id="category-tags">
+              <!-- Loaded by JS -->
+            </div>
+          </div>
+
+          <!-- Ad / Newsletter -->
+          <div class="sidebar-widget" style="background:linear-gradient(135deg,#c0392b,#e74c3c);color:white;text-align:center">
+            <div style="font-size:28px;margin-bottom:8px">📧</div>
+            <h3 style="font-family:var(--font-display);margin-bottom:8px;font-size:16px">Newsletter</h3>
+            <p style="font-size:12px;opacity:0.85;margin-bottom:12px">Get the latest news delivered to your inbox daily.</p>
+            <input type="email" placeholder="Your email" style="width:100%;padding:8px;border:none;border-radius:4px;font-size:13px;margin-bottom:8px">
+            <button style="width:100%;padding:8px;background:#922b21;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:700;font-size:13px">Subscribe</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="logo">
+            <div class="logo-icon" style="background:var(--primary)">N</div>
+            <div class="logo-text">
+              <span>NewsHub</span>
+              <span>Your Trusted News Source</span>
+            </div>
+          </a>
+          <p style="margin-top:12px">Stay informed with breaking news, in-depth analysis, and the latest stories from around the world.</p>
+          <div class="social-links">
+            <a href="#" class="social-link">f</a>
+            <a href="#" class="social-link">t</a>
+            <a href="#" class="social-link">in</a>
+            <a href="#" class="social-link">▶</a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/category.html?cat=Politics">Politics</a></li>
+            <li><a href="/category.html?cat=Sport">Sport</a></li>
+            <li><a href="/category.html?cat=Technology">Technology</a></li>
+            <li><a href="/category.html?cat=Entertainment">Entertainment</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Sections</h4>
+          <ul>
+            <li><a href="/category.html?cat=Business">Business</a></li>
+            <li><a href="/category.html?cat=Health">Health</a></li>
+            <li><a href="/category.html?cat=World">World</a></li>
+            <li><a href="/category.html?cat=Education">Education</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/pages/about.html">About Us</a></li>
+            <li><a href="/pages/contact.html">Contact</a></li>
+            <li><a href="/pages/privacy.html">Privacy Policy</a></li>
+            <li><a href="/admin/login.html">Admin Panel</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="container">
+        <p>© 2024 NewsHub. All rights reserved. | Built with Node.js + MongoDB</p>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  </script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

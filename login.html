@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search | NewsHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header id="header">
+    <div class="header-top">
+      <div class="container">
+        <span>📅 <span id="today-date"></span></span>
+      </div>
+    </div>
+    <div class="header-main">
+      <div class="container">
+        <a href="/" class="logo">
+          <div class="logo-icon">N</div>
+          <div class="logo-text"><span>NewsHub</span><span>Your Trusted News Source</span></div>
+        </a>
+        <form class="header-search" id="search-form">
+          <input type="text" id="search-input" id="search-query" placeholder="Search news...">
+          <button type="submit">🔍</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <nav id="navbar">
+    <div class="container nav-container">
+      <ul class="nav-list" id="nav-list">
+        <li><a href="/">🏠 Home</a></li>
+        <li><a href="/category.html?cat=Politics">🏛️ Politics</a></li>
+        <li><a href="/category.html?cat=Sport">⚽ Sport</a></li>
+        <li><a href="/category.html?cat=Technology">💻 Tech</a></li>
+        <li><a href="/category.html?cat=Entertainment">🎭 Entertainment</a></li>
+      </ul>
+      <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <div class="search-header">
+    <div class="container">
+      <h2>🔍 Search Results</h2>
+      <p class="search-results-info" id="search-info">Searching...</p>
+    </div>
+  </div>
+
+  <main>
+    <div class="container">
+      <div class="main-layout">
+        <div>
+          <div class="news-grid" id="search-grid"></div>
+          <div class="pagination" id="search-pagination"></div>
+        </div>
+        <aside class="sidebar">
+          <div class="sidebar-widget">
+            <div class="widget-title">🔥 Most Read</div>
+            <div id="popular-list"></div>
+          </div>
+          <div class="sidebar-widget">
+            <div class="widget-title">📂 Categories</div>
+            <div class="category-tags" id="category-tags"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-bottom" style="background:var(--secondary)">
+      <div class="container"><p>© 2024 NewsHub.</p></div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    // Pre-fill search input from URL
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) document.getElementById('search-input').value = q;
+  </script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

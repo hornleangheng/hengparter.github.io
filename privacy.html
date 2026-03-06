@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Articles | Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body" id="admin-page" data-page="articles">
+  <aside class="admin-sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">N</div>
+      <div><span>NewsHub</span><small>Admin Panel</small></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Main</div>
+      <a href="/admin/dashboard.html" class="sidebar-link"><span class="icon">📊</span> Dashboard</a>
+      <a href="/admin/articles.html" class="sidebar-link active"><span class="icon">📰</span> Articles</a>
+      <a href="/admin/create.html" class="sidebar-link"><span class="icon">✏️</span> Create Article</a>
+      <a href="/admin/categories.html" class="sidebar-link"><span class="icon">📂</span> Categories</a>
+      <div class="nav-section-title" style="margin-top:12px">System</div>
+      <a href="/" class="sidebar-link" target="_blank"><span class="icon">🌐</span> View Site</a>
+      <a href="#" class="sidebar-link" onclick="logout()"><span class="icon">🚪</span> Logout</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <div class="topbar-left">
+        <span class="page-title">📰 Articles</span>
+      </div>
+      <div class="topbar-right">
+        <a href="/admin/create.html" class="btn btn-primary btn-sm">+ New Article</a>
+        <div class="user-badge">
+          <div class="user-avatar" id="user-avatar-text">A</div>
+          <span id="topbar-username">Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-content">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>All Articles</h3>
+          <div class="search-filter">
+            <input type="text" id="article-search" placeholder="Search articles..." onkeyup="filterArticles()">
+            <select id="article-cat-filter" onchange="filterArticles()">
+              <option value="">All Categories</option>
+              <option>Politics</option>
+              <option>Sport</option>
+              <option>Technology</option>
+              <option>Entertainment</option>
+              <option>Business</option>
+              <option>Health</option>
+              <option>World</option>
+              <option>Education</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Image</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Author</th>
+                <th>Date</th>
+                <th>Views</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="articles-tbody">
+              <tr><td colspan="7" style="text-align:center;padding:30px;color:#999">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="padding:16px;display:flex;justify-content:center">
+          <div class="pagination" id="admin-pagination" style="margin:0"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

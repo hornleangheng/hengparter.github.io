@@ -1,0 +1,501 @@
+// ===== Config =====
+const API = '/api';
+
+// ===== State =====
+let currentPage = 1;
+let currentCategory = '';
+let currentSearch = '';
+let currentSlide = 0;
+let sliderInterval;
+
+// ===== DOM Ready =====
+document.addEventListener('DOMContentLoaded', () => {
+  initPage();
+  initNav();
+  initSearch();
+  loadCategories();
+});
+
+function initPage() {
+  const path = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
+
+  if (path === '/' || path === '/index.html') {
+    loadFeaturedSlider();
+    loadTopStories();
+    loadLatestNews();
+    loadPopularArticles();
+    loadCategoryPreviews();
+    loadBreakingNews();
+  } else if (path === '/article.html') {
+    const slug = params.get('slug');
+    if (slug) loadArticle(slug);
+  } else if (path === '/category.html') {
+    const cat = params.get('cat') || '';
+    currentCategory = cat;
+    document.title = `${cat || 'All News'} | NewsHub`;
+    loadCategoryPage(cat);
+  } else if (path === '/search.html') {
+    const q = params.get('q') || '';
+    currentSearch = q;
+    loadSearchResults(q);
+  }
+}
+
+// ===== Navigation =====
+function initNav() {
+  const hamburger = document.getElementById('hamburger');
+  const navList = document.getElementById('nav-list');
+  if (hamburger && navList) {
+    hamburger.addEventListener('click', () => {
+      navList.classList.toggle('open');
+    });
+  }
+
+  // Highlight active nav item
+  const path = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
+  document.querySelectorAll('.nav-list a').forEach(a => {
+    if (a.href === window.location.href ||
+      (path === '/category.html' && a.dataset.cat === params.get('cat'))) {
+      a.classList.add('active');
+    }
+  });
+}
+
+// ===== Search =====
+function initSearch() {
+  const searchForm = document.getElementById('search-form');
+  const searchInput = document.getElementById('search-input');
+  if (searchForm) {
+    searchForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const q = searchInput.value.trim();
+      if (q) window.location.href = `/search.html?q=${encodeURIComponent(q)}`;
+    });
+  }
+}
+
+// ===== API Helpers =====
+async function fetchArticles(params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  const res = await fetch(`${API}/articles?${qs}`);
+  return res.json();
+}
+
+async function fetchArticle(slug) {
+  const res = await fetch(`${API}/articles/${slug}`);
+  if (!res.ok) throw new Error('Article not found');
+  return res.json();
+}
+
+async function fetchPopular() {
+  const res = await fetch(`${API}/articles/popular`);
+  return res.json();
+}
+
+async function fetchCats() {
+  const res = await fetch(`${API}/categories`);
+  return res.json();
+}
+
+// ===== Categories in Nav =====
+async function loadCategories() {
+  try {
+    const cats = await fetchCats();
+    const catTags = document.getElementById('category-tags');
+    if (catTags) {
+      catTags.innerHTML = cats.map(c =>
+        `<span class="cat-tag" onclick="goToCategory('${c.name}')">${c.icon} ${c.name}</span>`
+      ).join('');
+    }
+  } catch (e) {}
+}
+
+// ===== Featured Slider =====
+async function loadFeaturedSlider() {
+  const container = document.getElementById('slider-track');
+  const dotsEl = document.getElementById('slider-dots');
+  if (!container) return;
+
+  try {
+    const data = await fetchArticles({ featured: 'true', limit: 5 });
+    const articles = data.articles;
+    if (!articles.length) { document.getElementById('slider-section')?.remove(); return; }
+
+    container.innerHTML = articles.map(a => `
+      <div class="slide" onclick="goToArticle('${a.slug}')">
+        <img src="${a.image || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200'}"
+          alt="${a.title}" loading="lazy" onerror="this.src='https://via.placeholder.com/1200x500?text=No+Image'">
+        <div class="slide-overlay"></div>
+        <div class="slide-content">
+          <span class="slide-category">${a.category}</span>
+          <h2 class="slide-title">${a.title}</h2>
+          <p class="slide-desc">${a.description}</p>
+        </div>
+      </div>
+    `).join('');
+
+    // Dots
+    dotsEl.innerHTML = articles.map((_, i) =>
+      `<span class="dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></span>`
+    ).join('');
+
+    startSlider(articles.length);
+  } catch (e) {
+    console.error('Slider error:', e);
+  }
+}
+
+function goToSlide(n) {
+  const track = document.getElementById('slider-track');
+  const dots = document.querySelectorAll('.dot');
+  const slides = track?.querySelectorAll('.slide');
+  if (!slides?.length) return;
+  currentSlide = (n + slides.length) % slides.length;
+  track.style.transform = `translateX(-${currentSlide * 100}%)`;
+  dots.forEach((d, i) => d.classList.toggle('active', i === currentSlide));
+}
+
+function startSlider(count) {
+  clearInterval(sliderInterval);
+  sliderInterval = setInterval(() => goToSlide(currentSlide + 1), 5000);
+}
+
+window.prevSlide = () => { goToSlide(currentSlide - 1); clearInterval(sliderInterval); };
+window.nextSlide = () => { goToSlide(currentSlide + 1); clearInterval(sliderInterval); };
+window.goToSlide = goToSlide;
+
+// ===== Breaking News =====
+async function loadBreakingNews() {
+  const ticker = document.getElementById('ticker-content');
+  if (!ticker) return;
+  try {
+    const data = await fetchArticles({ limit: 8 });
+    ticker.innerHTML = data.articles.map(a =>
+      `<a href="/article.html?slug=${a.slug}">${a.title}</a>`
+    ).join('');
+  } catch (e) {}
+}
+
+// ===== Top Stories =====
+async function loadTopStories() {
+  const main = document.getElementById('top-story-main');
+  const side = document.getElementById('top-stories-side');
+  if (!main) return;
+
+  try {
+    const data = await fetchArticles({ limit: 5 });
+    const [first, ...rest] = data.articles;
+    if (!first) return;
+
+    main.innerHTML = articleCardLarge(first);
+    if (side) side.innerHTML = rest.map(a => sideArticleCard(a)).join('');
+  } catch (e) {
+    main.innerHTML = errorState();
+  }
+}
+
+// ===== Latest News =====
+async function loadLatestNews() {
+  const grid = document.getElementById('latest-grid');
+  const pagination = document.getElementById('main-pagination');
+  if (!grid) return;
+
+  grid.innerHTML = skeletonCards(6);
+
+  try {
+    const data = await fetchArticles({ page: currentPage, limit: 6 });
+    grid.innerHTML = data.articles.map(a => articleCard(a)).join('') || emptyState('No articles yet');
+    renderPagination(pagination, data.pages, currentPage, p => {
+      currentPage = p;
+      loadLatestNews();
+      grid.scrollIntoView({ behavior: 'smooth' });
+    });
+  } catch (e) {
+    grid.innerHTML = errorState();
+  }
+}
+
+// ===== Popular Articles Sidebar =====
+async function loadPopularArticles() {
+  const el = document.getElementById('popular-list');
+  if (!el) return;
+  try {
+    const articles = await fetchPopular();
+    el.innerHTML = articles.map((a, i) => `
+      <div class="popular-item" onclick="goToArticle('${a.slug}')">
+        <div class="popular-rank">${i + 1}</div>
+        <div class="popular-info">
+          <div class="card-title">${a.title}</div>
+          <div class="card-meta">
+            <span>📅 ${formatDate(a.createdAt)}</span>
+            <span>👁 ${a.views || 0}</span>
+          </div>
+        </div>
+      </div>
+    `).join('') || '<p class="text-muted" style="padding:12px;font-size:13px">No data</p>';
+  } catch (e) {}
+}
+
+// ===== Category Previews =====
+async function loadCategoryPreviews() {
+  const el = document.getElementById('category-sections');
+  if (!el) return;
+
+  try {
+    const cats = await fetchCats();
+    const sections = await Promise.all(
+      cats.slice(0, 4).map(async c => {
+        const data = await fetchArticles({ category: c.name, limit: 4 });
+        return { cat: c, articles: data.articles };
+      })
+    );
+
+    el.innerHTML = sections.map(({ cat, articles }) => `
+      <section class="category-section">
+        <div class="section-title">
+          <span class="icon">${cat.icon}</span>
+          ${cat.name}
+          <a href="/category.html?cat=${encodeURIComponent(cat.name)}"
+            style="margin-left:auto;font-size:13px;font-weight:600;color:var(--primary);font-family:var(--font-body)">
+            See all →
+          </a>
+        </div>
+        <div class="news-grid">
+          ${articles.map(a => articleCard(a)).join('') || '<p style="color:#999;font-size:13px">No articles</p>'}
+        </div>
+      </section>
+    `).join('');
+  } catch (e) {}
+}
+
+// ===== Article Page =====
+async function loadArticle(slug) {
+  const el = document.getElementById('article-content');
+  const sideLatest = document.getElementById('side-latest');
+  if (!el) return;
+
+  el.innerHTML = '<div style="text-align:center;padding:60px"><div class="skeleton" style="width:60%;height:32px;margin:0 auto 16px"></div><div class="skeleton" style="width:80%;height:16px;margin:0 auto"></div></div>';
+
+  try {
+    const article = await fetchArticle(slug);
+    document.title = `${article.title} | NewsHub`;
+    document.querySelector('meta[name="description"]')?.setAttribute('content', article.description);
+
+    el.innerHTML = `
+      <article class="article-header">
+        <span class="category-badge" onclick="goToCategory('${article.category}')" style="cursor:pointer">${article.category}</span>
+        <h1>${article.title}</h1>
+        <p class="description">${article.description}</p>
+        <div class="article-meta">
+          <span>✍️ ${article.author}</span>
+          <span>📅 ${formatDate(article.createdAt)}</span>
+          <span>👁 ${article.views} views</span>
+        </div>
+        ${article.image ? `<img src="${article.image}" alt="${article.title}" class="article-featured-img" onerror="this.remove()">` : ''}
+      </article>
+      <div class="article-body">${article.content}</div>
+    `;
+
+    // Load related
+    loadRelatedArticles(article.category, article._id);
+    if (sideLatest) loadSideLatest();
+    loadPopularArticles();
+  } catch (e) {
+    el.innerHTML = `<div class="no-results"><div class="icon">😔</div><h3>Article Not Found</h3><p>This article may have been removed.</p><a href="/" style="color:var(--primary);font-weight:600">← Back to Home</a></div>`;
+  }
+}
+
+async function loadRelatedArticles(category, excludeId) {
+  const el = document.getElementById('related-articles');
+  if (!el) return;
+  try {
+    const data = await fetchArticles({ category, limit: 4 });
+    const filtered = data.articles.filter(a => a._id !== excludeId).slice(0, 3);
+    el.innerHTML = filtered.map(a => articleCard(a)).join('');
+  } catch (e) {}
+}
+
+async function loadSideLatest() {
+  const el = document.getElementById('side-latest');
+  if (!el) return;
+  try {
+    const data = await fetchArticles({ limit: 6 });
+    el.innerHTML = data.articles.map(a => `
+      <div class="latest-item" onclick="goToArticle('${a.slug}')">
+        <div class="img-wrap">
+          <img src="${a.image || 'https://via.placeholder.com/70x52'}" alt="${a.title}" loading="lazy"
+            onerror="this.src='https://via.placeholder.com/70x52?text=N'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">${a.title}</div>
+          <div class="card-meta"><span>📅 ${formatDate(a.createdAt)}</span></div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {}
+}
+
+// ===== Category Page =====
+async function loadCategoryPage(category) {
+  const grid = document.getElementById('category-grid');
+  const pagination = document.getElementById('cat-pagination');
+  const title = document.getElementById('cat-title');
+  if (!grid) return;
+
+  if (title) title.textContent = category || 'All News';
+  grid.innerHTML = skeletonCards(9);
+
+  try {
+    const params = { page: currentPage, limit: 9 };
+    if (category) params.category = category;
+    const data = await fetchArticles(params);
+    grid.innerHTML = data.articles.map(a => articleCard(a)).join('') || emptyState('No articles in this category');
+    renderPagination(pagination, data.pages, currentPage, p => {
+      currentPage = p;
+      loadCategoryPage(category);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  } catch (e) {
+    grid.innerHTML = errorState();
+  }
+}
+
+// ===== Search Results =====
+async function loadSearchResults(query) {
+  const grid = document.getElementById('search-grid');
+  const info = document.getElementById('search-info');
+  const pagination = document.getElementById('search-pagination');
+  if (!grid) return;
+
+  document.getElementById('search-query')?.setAttribute('placeholder', query);
+  document.title = `Search: ${query} | NewsHub`;
+  grid.innerHTML = skeletonCards(9);
+
+  try {
+    const data = await fetchArticles({ search: query, page: currentPage, limit: 9 });
+    if (info) info.textContent = `Found ${data.total} result(s) for "${query}"`;
+    grid.innerHTML = data.articles.map(a => articleCard(a)).join('') ||
+      `<div class="no-results" style="grid-column:1/-1"><div class="icon">🔍</div><h3>No results found</h3><p>Try different keywords</p></div>`;
+    renderPagination(pagination, data.pages, currentPage, p => {
+      currentPage = p;
+      loadSearchResults(query);
+    });
+  } catch (e) {
+    grid.innerHTML = errorState();
+  }
+}
+
+// ===== Card Templates =====
+function articleCard(a) {
+  return `
+    <div class="article-card" onclick="goToArticle('${a.slug}')">
+      <div class="img-wrap">
+        <img src="${a.image || 'https://via.placeholder.com/400x225?text=No+Image'}" alt="${a.title}" loading="lazy"
+          onerror="this.src='https://via.placeholder.com/400x225?text=No+Image'">
+      </div>
+      <div class="card-body">
+        <span class="card-category">${a.category}</span>
+        <div class="card-title">${a.title}</div>
+        <p class="card-desc">${a.description}</p>
+        <div class="card-meta">
+          <span>📅 ${formatDate(a.createdAt)}</span>
+          <span>✍️ ${a.author}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function articleCardLarge(a) {
+  return `
+    <div class="article-card" onclick="goToArticle('${a.slug}')">
+      <div class="img-wrap" style="aspect-ratio:16/10">
+        <img src="${a.image || 'https://via.placeholder.com/800x500?text=No+Image'}" alt="${a.title}" loading="lazy">
+      </div>
+      <div class="card-body">
+        <span class="card-category">${a.category}</span>
+        <div class="card-title" style="font-size:20px;-webkit-line-clamp:3">${a.title}</div>
+        <p class="card-desc" style="-webkit-line-clamp:3">${a.description}</p>
+        <div class="card-meta">
+          <span>📅 ${formatDate(a.createdAt)}</span>
+          <span>✍️ ${a.author}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function sideArticleCard(a) {
+  return `
+    <div class="side-article" onclick="goToArticle('${a.slug}')">
+      <div class="img-wrap">
+        <img src="${a.image || 'https://via.placeholder.com/80x60?text=N'}" alt="${a.title}" loading="lazy">
+      </div>
+      <div class="card-body">
+        <span class="card-category" style="font-size:10px">${a.category}</span>
+        <div class="card-title">${a.title}</div>
+        <div class="card-meta"><span>📅 ${formatDate(a.createdAt)}</span></div>
+      </div>
+    </div>`;
+}
+
+function skeletonCards(n) {
+  return Array(n).fill(0).map(() => `
+    <div class="skeleton-card">
+      <div class="skeleton skeleton-img"></div>
+      <div class="skeleton-body">
+        <div class="skeleton skeleton-text" style="width:60%"></div>
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-title" style="width:80%"></div>
+        <div class="skeleton skeleton-desc" style="width:90%"></div>
+        <div class="skeleton skeleton-desc" style="width:70%"></div>
+      </div>
+    </div>`).join('');
+}
+
+function emptyState(msg) {
+  return `<div class="no-results" style="grid-column:1/-1"><div class="icon">📰</div><h3>${msg}</h3></div>`;
+}
+
+function errorState() {
+  return `<div class="no-results" style="grid-column:1/-1"><div class="icon">⚠️</div><h3>Failed to load</h3><p>Please try again later</p></div>`;
+}
+
+// ===== Pagination =====
+function renderPagination(el, totalPages, current, onPageChange) {
+  if (!el || totalPages <= 1) { if (el) el.innerHTML = ''; return; }
+
+  let buttons = '';
+  buttons += `<button onclick="changePage(${current - 1})" ${current === 1 ? 'disabled' : ''}>‹</button>`;
+
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= current - 2 && i <= current + 2)) {
+      buttons += `<button onclick="changePage(${i})" class="${i === current ? 'active' : ''}">${i}</button>`;
+    } else if (i === current - 3 || i === current + 3) {
+      buttons += `<button disabled>…</button>`;
+    }
+  }
+
+  buttons += `<button onclick="changePage(${current + 1})" ${current === totalPages ? 'disabled' : ''}>›</button>`;
+  el.innerHTML = buttons;
+
+  window.changePage = p => {
+    if (p < 1 || p > totalPages) return;
+    onPageChange(p);
+  };
+}
+
+// ===== Navigation Helpers =====
+window.goToArticle = (slug) => { window.location.href = `/article.html?slug=${slug}`; };
+window.goToCategory = (cat) => { window.location.href = `/category.html?cat=${encodeURIComponent(cat)}`; };
+
+// ===== Utils =====
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function formatDateFull(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}

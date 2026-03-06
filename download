@@ -1,0 +1,121 @@
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+require('dotenv').config();
+
+const User = require('./models/User');
+const Category = require('./models/Category');
+const Article = require('./models/Article');
+
+const categories = [
+  { name: 'Politics', slug: 'politics', color: '#c0392b', icon: '🏛️' },
+  { name: 'Sport', slug: 'sport', color: '#2980b9', icon: '⚽' },
+  { name: 'Technology', slug: 'technology', color: '#27ae60', icon: '💻' },
+  { name: 'Entertainment', slug: 'entertainment', color: '#8e44ad', icon: '🎭' },
+  { name: 'Business', slug: 'business', color: '#d35400', icon: '💼' },
+  { name: 'Health', slug: 'health', color: '#16a085', icon: '🏥' },
+  { name: 'World', slug: 'world', color: '#2c3e50', icon: '🌍' },
+  { name: 'Education', slug: 'education', color: '#f39c12', icon: '📚' },
+];
+
+const sampleArticles = [
+  {
+    title: 'Government Announces New Infrastructure Development Plan',
+    description: 'The government unveiled a comprehensive infrastructure plan worth billions to boost economic growth.',
+    content: '<p>The government today announced a landmark infrastructure development initiative aimed at modernizing the country\'s transportation network, digital infrastructure, and public services.</p><p>The plan includes construction of new highways, expansion of internet connectivity to rural areas, and renovation of public hospitals and schools across the country.</p><p>Officials expect the project to create thousands of jobs and significantly boost economic growth over the next decade.</p>',
+    category: 'Politics',
+    featured: true,
+    image: 'https://images.unsplash.com/photo-1529088363599-b24aa07c4a62?w=800',
+  },
+  {
+    title: 'National Football Team Qualifies for Regional Championship',
+    description: 'After a stunning victory, the national team secured their spot in the upcoming regional championship.',
+    content: '<p>In an electrifying match that kept fans on the edge of their seats, the national football team secured qualification for the regional championship with a decisive 3-1 victory.</p><p>The team\'s star striker scored twice in the second half to seal the win after the opponents equalized early in the game.</p>',
+    category: 'Sport',
+    featured: true,
+    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800',
+  },
+  {
+    title: 'Tech Startups Attract Record Investment in 2024',
+    description: 'Local technology startups have attracted unprecedented foreign investment this year.',
+    content: '<p>The tech startup ecosystem has experienced remarkable growth this year, with foreign direct investment reaching record levels.</p><p>Investors from Silicon Valley and Asian tech hubs have been particularly attracted to fintech and agritech solutions developed by local entrepreneurs.</p>',
+    category: 'Technology',
+    featured: true,
+    image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800',
+  },
+  {
+    title: 'International Film Festival Opens to Packed Audiences',
+    description: 'The annual international film festival kicked off with record attendance and celebrated filmmakers.',
+    content: '<p>The 15th annual International Film Festival opened its doors to enthusiastic crowds, with over 50 films from 30 countries competing for the prestigious Golden Palm award.</p><p>This year\'s festival features a special retrospective on Southeast Asian cinema and includes workshops for emerging filmmakers.</p>',
+    category: 'Entertainment',
+    image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800',
+  },
+  {
+    title: 'Stock Market Hits All-Time High Amid Economic Optimism',
+    description: 'The stock exchange reached record heights as investors show confidence in economic recovery.',
+    content: '<p>The national stock exchange reached an all-time high today, reflecting growing investor confidence in the country\'s economic trajectory.</p><p>The benchmark index rose 2.4% to close at a record level, driven by strong performances in the banking, real estate, and consumer goods sectors.</p>',
+    category: 'Business',
+    image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800',
+  },
+  {
+    title: 'New Healthcare Initiative to Expand Rural Access',
+    description: 'Ministry of Health launches ambitious program to bring quality healthcare to underserved communities.',
+    content: '<p>The Ministry of Health today launched a groundbreaking initiative to extend quality healthcare services to rural and underserved communities across the country.</p><p>The program will deploy mobile medical units, train community health workers, and establish telemedicine connections between rural clinics and urban hospitals.</p>',
+    category: 'Health',
+    image: 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=800',
+  },
+  {
+    title: 'ASEAN Summit Focuses on Climate Change Action',
+    description: 'Regional leaders gather to discuss unified response to climate challenges and environmental protection.',
+    content: '<p>Leaders from across the ASEAN region convened for an emergency summit focused on accelerating climate action and developing a coordinated regional response to environmental challenges.</p><p>Key discussions centered on transitioning to renewable energy, protecting remaining forests, and addressing the increasing frequency of extreme weather events.</p>',
+    category: 'World',
+    image: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800',
+  },
+  {
+    title: 'University Rankings Show Dramatic Improvement',
+    description: 'Local universities climb global rankings following investment in research and academic programs.',
+    content: '<p>Several local universities have achieved significant improvements in this year\'s QS World University Rankings, reflecting substantial investments in research infrastructure and academic talent.</p><p>The improvements are attributed to increased government funding for research, international faculty recruitment, and improved student outcomes.</p>',
+    category: 'Education',
+    image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800',
+  },
+];
+
+async function seed() {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/newsdb');
+    console.log('Connected to MongoDB');
+
+    // Clear existing data
+    await User.deleteMany({});
+    await Category.deleteMany({});
+    await Article.deleteMany({});
+
+    // Create admin user
+    const admin = new User({
+      username: 'admin',
+      email: 'admin@newssite.com',
+      password: 'Admin@123',
+      role: 'admin',
+    });
+    await admin.save();
+    console.log('✅ Admin user created: admin / Admin@123');
+
+    // Create categories
+    await Category.insertMany(categories);
+    console.log('✅ Categories created');
+
+    // Create articles
+    for (const articleData of sampleArticles) {
+      const article = new Article({ ...articleData, author: 'admin' });
+      await article.save();
+    }
+    console.log('✅ Sample articles created');
+
+    console.log('\n🎉 Database seeded successfully!');
+    process.exit(0);
+  } catch (err) {
+    console.error('Seed error:', err);
+    process.exit(1);
+  }
+}
+
+seed();

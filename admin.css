@@ -1,0 +1,392 @@
+// ===== Admin JS =====
+const API = '/api';
+let token = localStorage.getItem('admin_token');
+let user = JSON.parse(localStorage.getItem('admin_user') || 'null');
+let editingArticleId = null;
+let currentAdminPage = 1;
+let adminPageFilter = '';
+let imageUrl = '';
+
+// ===== Auth Check =====
+function requireAuth() {
+  if (!token || !user) {
+    window.location.href = '/admin/login.html';
+    return false;
+  }
+  return true;
+}
+
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+}
+
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', () => {
+  const page = document.getElementById('admin-page');
+  if (!page) return;
+  if (!requireAuth()) return;
+
+  const pageId = page.dataset.page;
+  document.getElementById('topbar-username')?.textContent && (document.getElementById('topbar-username').textContent = user.username);
+  document.getElementById('user-avatar-text')?.textContent && (document.getElementById('user-avatar-text').textContent = user.username.charAt(0).toUpperCase());
+
+  switch (pageId) {
+    case 'dashboard': loadDashboard(); break;
+    case 'articles': loadAdminArticles(); break;
+    case 'create': initArticleForm(); break;
+    case 'categories': loadAdminCategories(); break;
+  }
+
+  // Sidebar active state
+  document.querySelectorAll('.sidebar-link').forEach(l => {
+    if (l.href === window.location.href) l.classList.add('active');
+  });
+});
+
+// ===== Dashboard =====
+async function loadDashboard() {
+  try {
+    const [articlesData, popular] = await Promise.all([
+      fetch(`${API}/articles?limit=1`, { headers: authHeaders() }).then(r => r.json()),
+      fetch(`${API}/articles/popular`, { headers: authHeaders() }).then(r => r.json()),
+    ]);
+
+    document.getElementById('total-articles')?.textContent !== undefined &&
+      (document.getElementById('total-articles').textContent = articlesData.total || 0);
+
+    // Recent articles table
+    const recentData = await fetch(`${API}/articles?limit=8`, { headers: authHeaders() }).then(r => r.json());
+    const tbody = document.getElementById('recent-tbody');
+    if (tbody) {
+      tbody.innerHTML = recentData.articles.map(a => `
+        <tr>
+          <td><img src="${a.image || 'https://via.placeholder.com/56x40'}" class="table-img" onerror="this.src='https://via.placeholder.com/56x40?text=N'" alt="${a.title}"></td>
+          <td style="max-width:280px"><strong style="font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${a.title}</strong></td>
+          <td><span class="category-badge ${a.category.toLowerCase()}">${a.category}</span></td>
+          <td>${a.author}</td>
+          <td>${formatAdminDate(a.createdAt)}</td>
+          <td>${a.views || 0}</td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-warning btn-sm" onclick="editArticle('${a._id}')">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteArticle('${a._id}', '${a.title.substring(0, 30)}...')">🗑</button>
+            </div>
+          </td>
+        </tr>`).join('');
+      document.getElementById('total-articles').textContent = articlesData.total;
+    }
+  } catch (e) { console.error(e); }
+}
+
+// ===== Articles List =====
+async function loadAdminArticles(page = 1) {
+  const tbody = document.getElementById('articles-tbody');
+  const search = document.getElementById('article-search')?.value || '';
+  const cat = document.getElementById('article-cat-filter')?.value || '';
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#999">Loading...</td></tr>`;
+
+  try {
+    const params = new URLSearchParams({ page, limit: 10, ...(search && { search }), ...(cat && { category: cat }) });
+    const data = await fetch(`${API}/articles?${params}`, { headers: authHeaders() }).then(r => r.json());
+    currentAdminPage = page;
+
+    tbody.innerHTML = data.articles.length ? data.articles.map(a => `
+      <tr>
+        <td><img src="${a.image || 'https://via.placeholder.com/56x40'}" class="table-img" onerror="this.src='https://via.placeholder.com/56x40'" alt="${a.title}"></td>
+        <td style="max-width:240px"><strong style="font-size:13px">${a.title}</strong></td>
+        <td><span class="category-badge ${a.category.toLowerCase()}">${a.category}</span></td>
+        <td>${a.author}</td>
+        <td>${formatAdminDate(a.createdAt)}</td>
+        <td>${a.views || 0}</td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-warning btn-sm" onclick="editArticle('${a._id}')">✏️ Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteArticle('${a._id}', '${a.title.substring(0, 25)}...')">🗑 Delete</button>
+          </div>
+        </td>
+      </tr>`).join('')
+      : `<tr><td colspan="7"><div class="empty-state"><div class="icon">📰</div><p>No articles found</p></div></td></tr>`;
+
+    renderAdminPagination(data.pages, page);
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red;padding:20px">Error loading articles</td></tr>`; }
+}
+
+function renderAdminPagination(total, current) {
+  const el = document.getElementById('admin-pagination');
+  if (!el) return;
+  if (total <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  html += `<button onclick="loadAdminArticles(${current - 1})" ${current === 1 ? 'disabled' : ''}>‹ Prev</button>`;
+  for (let i = 1; i <= total; i++) {
+    html += `<button onclick="loadAdminArticles(${i})" class="${i === current ? 'active' : ''}">${i}</button>`;
+  }
+  html += `<button onclick="loadAdminArticles(${current + 1})" ${current === total ? 'disabled' : ''}>Next ›</button>`;
+  el.innerHTML = html;
+}
+
+// ===== Article Form =====
+function initArticleForm() {
+  if (!requireAuth()) return;
+
+  // Load categories for select
+  fetch(`${API}/categories`).then(r => r.json()).then(cats => {
+    const sel = document.getElementById('article-category');
+    if (sel) {
+      sel.innerHTML = `<option value="">Select category</option>` +
+        cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+    }
+  });
+
+  // Check if editing
+  const params = new URLSearchParams(window.location.search);
+  const editId = params.get('edit');
+  if (editId) {
+    editingArticleId = editId;
+    document.getElementById('form-title').textContent = '✏️ Edit Article';
+    loadArticleForEdit(editId);
+  }
+
+  // Image upload
+  const uploadArea = document.getElementById('upload-area');
+  const fileInput = document.getElementById('file-input');
+  const urlInput = document.getElementById('image-url-input');
+
+  if (uploadArea) {
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+    uploadArea.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) handleFileUpload(e.dataTransfer.files[0]);
+    });
+    fileInput?.addEventListener('change', e => { if (e.target.files[0]) handleFileUpload(e.target.files[0]); });
+  }
+
+  if (urlInput) {
+    urlInput.addEventListener('change', () => {
+      imageUrl = urlInput.value;
+      showImagePreview(imageUrl);
+    });
+  }
+
+  // Submit
+  document.getElementById('article-form')?.addEventListener('submit', submitArticle);
+
+  // Rich editor
+  initEditor();
+}
+
+async function loadArticleForEdit(id) {
+  try {
+    const article = await fetch(`${API}/articles/id/${id}`, { headers: authHeaders() }).then(r => r.json());
+    document.getElementById('art-title').value = article.title;
+    document.getElementById('art-desc').value = article.description;
+    document.getElementById('article-category').value = article.category;
+    document.getElementById('art-author').value = article.author;
+    document.getElementById('art-featured').checked = article.featured;
+    document.getElementById('image-url-input').value = article.image;
+    imageUrl = article.image;
+    if (article.image) showImagePreview(article.image);
+    document.getElementById('editor-area').innerHTML = article.content;
+  } catch (e) { showToast('Failed to load article', 'error'); }
+}
+
+async function submitArticle(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  const content = document.getElementById('editor-area').innerHTML;
+  const data = {
+    title: document.getElementById('art-title').value,
+    description: document.getElementById('art-desc').value,
+    content,
+    category: document.getElementById('article-category').value,
+    author: document.getElementById('art-author').value || user.username,
+    featured: document.getElementById('art-featured').checked,
+    image: imageUrl || document.getElementById('image-url-input').value,
+  };
+
+  if (!data.title || !data.description || !data.content || !data.category) {
+    showToast('Please fill all required fields', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Save Article';
+    return;
+  }
+
+  try {
+    const url = editingArticleId ? `${API}/articles/${editingArticleId}` : `${API}/articles`;
+    const method = editingArticleId ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(data) });
+    const result = await res.json();
+
+    if (res.ok) {
+      showToast(editingArticleId ? 'Article updated!' : 'Article created!', 'success');
+      setTimeout(() => window.location.href = '/admin/articles.html', 1200);
+    } else {
+      throw new Error(result.message);
+    }
+  } catch (err) {
+    showToast(err.message || 'Failed to save', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Save Article';
+  }
+}
+
+async function handleFileUpload(file) {
+  const formData = new FormData();
+  formData.append('image', file);
+  showToast('Uploading image...', 'info');
+
+  try {
+    const res = await fetch(`${API}/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    const data = await res.json();
+    if (res.ok) {
+      imageUrl = data.imageUrl;
+      document.getElementById('image-url-input').value = imageUrl;
+      showImagePreview(imageUrl);
+      showToast('Image uploaded!', 'success');
+    } else {
+      showToast(data.message || 'Upload failed', 'error');
+    }
+  } catch (e) { showToast('Upload failed', 'error'); }
+}
+
+function showImagePreview(url) {
+  const preview = document.getElementById('img-preview');
+  if (!preview) return;
+  preview.innerHTML = `
+    <div class="img-preview">
+      <img src="${url}" alt="Preview" onerror="this.src='https://via.placeholder.com/200x120?text=Invalid+URL'">
+      <button class="remove-img" onclick="removeImage()" type="button">✕</button>
+    </div>`;
+}
+
+window.removeImage = () => {
+  imageUrl = '';
+  document.getElementById('image-url-input').value = '';
+  document.getElementById('img-preview').innerHTML = '';
+};
+
+// ===== Delete Article =====
+async function deleteArticle(id, title) {
+  if (!confirm(`Delete "${title}"?\nThis cannot be undone.`)) return;
+
+  try {
+    const res = await fetch(`${API}/articles/${id}`, { method: 'DELETE', headers: authHeaders() });
+    if (res.ok) {
+      showToast('Article deleted', 'success');
+      loadAdminArticles(currentAdminPage);
+    } else {
+      const d = await res.json();
+      showToast(d.message, 'error');
+    }
+  } catch (e) { showToast('Delete failed', 'error'); }
+}
+
+function editArticle(id) {
+  window.location.href = `/admin/create.html?edit=${id}`;
+}
+
+window.deleteArticle = deleteArticle;
+window.editArticle = editArticle;
+
+// ===== Categories =====
+async function loadAdminCategories() {
+  const list = document.getElementById('categories-list');
+  if (!list) return;
+
+  try {
+    const cats = await fetch(`${API}/categories`).then(r => r.json());
+    list.innerHTML = cats.length ? cats.map(c => `
+      <tr>
+        <td>${c.icon}</td>
+        <td><strong>${c.name}</strong></td>
+        <td>${c.slug}</td>
+        <td><span style="background:${c.color};color:white;padding:3px 10px;border-radius:3px;font-size:12px">${c.color}</span></td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-danger btn-sm" onclick="deleteCategory('${c._id}', '${c.name}')">🗑 Delete</button>
+          </div>
+        </td>
+      </tr>`).join('')
+      : `<tr><td colspan="5" style="text-align:center;padding:20px;color:#999">No categories yet</td></tr>`;
+  } catch (e) {}
+}
+
+document.getElementById('category-form')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const data = {
+    name: document.getElementById('cat-name').value,
+    description: document.getElementById('cat-desc').value,
+    color: document.getElementById('cat-color').value,
+    icon: document.getElementById('cat-icon').value,
+  };
+
+  try {
+    const res = await fetch(`${API}/categories`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) });
+    if (res.ok) {
+      showToast('Category created!', 'success');
+      e.target.reset();
+      loadAdminCategories();
+    } else {
+      const d = await res.json();
+      showToast(d.message, 'error');
+    }
+  } catch (err) { showToast('Failed', 'error'); }
+});
+
+async function deleteCategory(id, name) {
+  if (!confirm(`Delete category "${name}"?`)) return;
+  const res = await fetch(`${API}/categories/${id}`, { method: 'DELETE', headers: authHeaders() });
+  if (res.ok) { showToast('Deleted', 'success'); loadAdminCategories(); }
+}
+
+window.deleteCategory = deleteCategory;
+
+// ===== Rich Editor =====
+function initEditor() {
+  const btn = cmd => document.getElementById('editor-area') && document.execCommand(cmd, false, null);
+  window.editorCmd = btn;
+}
+
+// ===== Logout =====
+window.logout = () => {
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin_user');
+  window.location.href = '/admin/login.html';
+};
+
+// ===== Toast =====
+function showToast(msg, type = 'info') {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+window.showToast = showToast;
+
+// ===== Date =====
+function formatAdminDate(d) {
+  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// ===== Search/filter in articles page =====
+window.filterArticles = () => loadAdminArticles(1);
